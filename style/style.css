@@ -163,7 +163,7 @@ h3 {
     padding-left: 10px;
 }
 
-#no-resize-area {
+#feedback-textarea {
     display: block;
     width: 86%;
     height: 108px;

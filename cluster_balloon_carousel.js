@@ -4,7 +4,8 @@ ymaps.ready(function() {
             center: mapCenter,
             zoom: 9,
             controls: []
-        });
+        }),
+        coords;
 
     // Создаем собственный макет с информацией о выбранном геообъекте.
     var customItemContentLayout = ymaps.templateLayoutFactory.createClass(
@@ -41,22 +42,34 @@ ymaps.ready(function() {
     var link = document.querySelector('#map');
     var popup = document.getElementById('popup');
     var add = document.getElementById('add');
+    var headerText = document.getElementById('header-text');
 
-    link.addEventListener('click', function(e) {
-        e.preventDefault();
-        popup.style.display = 'block';
-        popup.style.left = e.pageX - popup.offsetWidth + 'px';
-        popup.style.top = e.pageY + 'px';
+    map.events.add('click', function(e) {
+        if (!map.balloon.isOpen()) {
+            e.preventDefault();
+            coords = e.get('coords');
+            clientPixels = e.get('clientPixels');
+            popup.style.left = clientPixels[0] - popup.offsetWidth + 'px';
+            popup.style.top = clientPixels[1] + 'px';
+            ymaps.geocode(e.get('coords'), { kind: 'street' }).then(function(res) {
+                var nearestStreet = res.geoObjects.get(0);
+                headerText.innerText = `${nearestStreet.properties.get('description')}, ${nearestStreet.properties.get('name')}`;
+                popup.style.display = 'block';
+            });
+        } else {
+            map.balloon.close();
+        }
     });
 
     add.addEventListener('click', function(e) {
         var placemarks = [];
-        debugger;
-        var placemark = new ymaps.Placemark(getRandomPosition(), {
+        var placemark = new ymaps.Placemark(coords, {
             // Устаналиваем данные, которые будут отображаться в балуне.
-            balloonContentHeader: 'Метка №' + (2 + 1),
-            balloonContentBody: getContentBody(2),
-            balloonContentFooter: 'Мацуо Басё'
+            //   balloonContentHeader: document.getElementById('feedback-name').value,
+            balloonContentHeader: document.getElementById('feedback-place').value,
+            balloonContentBody: `<p>${headerText.innerText}</p> 
+                                 <p>${document.getElementById('feedback-textarea').value}</p>`,
+            balloonContentFooter: (new Date()).toLocaleString("ru")
         });
         placemarks.push(placemark);
 
@@ -76,15 +89,5 @@ ymaps.ready(function() {
         ];
     }
 
-    var placemarkBodies;
-
-    function getContentBody(num) {
-        if (!placemarkBodies) {
-            placemarkBodies = [
-                ['Слово скажу -', 'Леденеют губы.', 'Осенний вихрь!'].join('<br/>'), ['Вновь встают с земли', 'Опущенные дождем', 'Хризантем цветы.'].join('<br/>'), ['Ты свечу зажег.', 'Словно молнии проблеск,', 'В ладонях возник.'].join('<br/>')
-            ];
-        }
-        return '<br>' + placemarkBodies[num % placemarkBodies.length];
-    }
     clusterer.balloon.open(clusterer.getClusters()[0]);
 });
