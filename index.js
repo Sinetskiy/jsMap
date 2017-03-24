@@ -7,14 +7,13 @@ ymaps.ready(function() {
         }),
         coords,
         placemarks = [],
-
+        points = JSON.parse(localStorage.getItem('placemarks')) || [],
+        feedbackWrap = document.getElementById('feedback-wrap'),
         pointId = 0,
         popup = document.getElementById('popup'),
         add = document.getElementById('add'),
         headerText = document.getElementById('header-text'),
         link = document.getElementById('map');
-
-    points = JSON.parse(localStorage.getItem('placemarks')) || [];
 
     // Создаем собственный макет с информацией о выбранном геообъекте.
     var customItemContentLayout = ymaps.templateLayoutFactory.createClass(
@@ -84,12 +83,13 @@ ymaps.ready(function() {
         }
         map.balloon.close();
         coords = coords.split(';');
-        var points = getPointsByCoord(coords);
+        var feedbacks = getPointsByCoord(coords);
         // debugger;
 
+        feedbackWrap.innerHTML = createFeedbacks(feedbacks);
         popup.style.left = e.pageX + 'px';
         popup.style.top = e.pageY + 'px';
-        headerText.innerText = points[0].streatName;
+        headerText.innerText = feedbacks[0].streatName;
         popup.style.display = 'block';
 
     });
@@ -108,6 +108,14 @@ ymaps.ready(function() {
         placemarks.push(placemark);
         clusterer.add(placemarks);
         map.geoObjects.add(clusterer);
+    }
+
+    function createFeedbacks(feedbacks) {
+        var templateFn = require('./feedbacks-template.hbs');
+        debugger;
+        return templateFn({
+            friends: feedbacks
+        });
     }
 
     document.getElementById('hider').onclick = function() {
