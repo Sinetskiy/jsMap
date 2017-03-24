@@ -129,15 +129,6 @@ h3 {
     padding-top: 5px;
 }
 
-.form-head:after {
-    content: "";
-    position: absolute;
-    width: 3px;
-    height: 80px;
-    background: #c4c4c4;
-    top: 68px;
-}
-
 .form-inputs {
     width: 358px;
     margin: 20px auto;
@@ -187,4 +178,11 @@ h3 {
     color: #fff;
     float: right;
     margin-right: 5px;
+}
+
+.feedback-wrap {
+    width: 350px;
+    margin: 0 auto;
+    overflow-y: scroll;
+    height: 120px;
 }

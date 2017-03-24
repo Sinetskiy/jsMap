@@ -7,8 +7,14 @@ ymaps.ready(function() {
         }),
         coords,
         placemarks = [],
-        points = [],
-        pointId = 0;
+
+        pointId = 0,
+        popup = document.getElementById('popup'),
+        add = document.getElementById('add'),
+        headerText = document.getElementById('header-text'),
+        link = document.getElementById('map');
+
+    points = JSON.parse(localStorage.getItem('placemarks')) || [];
 
     // Создаем собственный макет с информацией о выбранном геообъекте.
     var customItemContentLayout = ymaps.templateLayoutFactory.createClass(
@@ -36,11 +42,6 @@ ymaps.ready(function() {
 
     });
 
-    var link = document.querySelector('#map');
-    var popup = document.getElementById('popup');
-    var add = document.getElementById('add');
-    var headerText = document.getElementById('header-text');
-
     map.events.add('click', function(e) {
         if (!map.balloon.isOpen()) {
             e.preventDefault();
@@ -59,46 +60,64 @@ ymaps.ready(function() {
         }
     });
 
-    link.addEventListener('click', function(e) {
-        if (!e.target.dataset.id) {
-            return;
-        }
-        debugger;
-
-    });
-
     add.addEventListener('click', function(e) {
-        var point = {
+        point = {
+            coords: coords,
             userName: document.getElementById('feedback-name').value,
             place: document.getElementById('feedback-place').value,
             streatName: headerText.innerText,
             feedback: document.getElementById('feedback-textarea').value,
-            date: new Date()
+            date: (new Date()).toLocaleString("ru")
         }
-        var placemark = new ymaps.Placemark(coords, {
+        points.push(point);
+
+        localStorage.setItem('placemarks', JSON.stringify(points));
+
+        addPointToMap(point);
+
+    });
+
+    link.addEventListener('click', function(e) {
+        var coords = e.target.dataset.coords;
+        if (!coords) {
+            return;
+        }
+        map.balloon.close();
+        coords = coords.split(';');
+        var points = getPointsByCoord(coords);
+        // debugger;
+
+        popup.style.left = e.pageX + 'px';
+        popup.style.top = e.pageY + 'px';
+        headerText.innerText = points[0].streatName;
+        popup.style.display = 'block';
+
+    });
+
+    function getPointsByCoord(coords) {
+        return points.filter(v => v.coords[0] == coords[0] && v.coords[1] == coords[1]);
+    }
+
+    function addPointToMap(point) {
+        var placemark = new ymaps.Placemark(point.coords, {
             balloonContentHeader: point.place,
-            balloonContentBody: `<p><a href="#" data-id="${point.id}" >${point.streatName}</a></p> 
+            balloonContentBody: `<p><a href="#" data-coords="${point.coords[0]};${point.coords[1]}" >${point.streatName}</a></p> 
                                  <p>${point.feedback}</p>`,
-            balloonContentFooter: point.date.toLocaleString("ru")
+            balloonContentFooter: point.date
         });
         placemarks.push(placemark);
-        points.push(point);
         clusterer.add(placemarks);
         map.geoObjects.add(clusterer);
-        //placemarks[3].geometry.getCoordinates()
-        debugger;
-        sessionStorage.setItem(pointId, JSON.stringify(points));
-    });
+    }
 
     document.getElementById('hider').onclick = function() {
         document.getElementById('popup').style.display = 'none';
     }
 
-    function getLastId() {
-        return 0;
+    if (points.length > 0) {
+        for (let point of points) {
+            addPointToMap(point);
+        }
     }
 
-
-
-    clusterer.balloon.open(clusterer.getClusters()[0]);
 });
