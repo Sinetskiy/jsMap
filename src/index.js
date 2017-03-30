@@ -1,3 +1,5 @@
+var feedbacksTemplate = require('../feedbacks-template.hbs');
+
 ymaps.ready(function() {
     var mapCenter = [55.755381, 37.619044],
         map = new ymaps.Map('map', {
@@ -9,15 +11,16 @@ ymaps.ready(function() {
         placemarks = [],
         points = JSON.parse(localStorage.getItem('placemarks')) || [],
         feedbackWrap = document.getElementById('feedback-wrap'),
-        pointId = 0,
         popup = document.getElementById('popup'),
         add = document.getElementById('add'),
         headerText = document.getElementById('header-text'),
-        link = document.getElementById('map');
+        link = document.getElementById('map'),
+        formHider = document.getElementById('hider'),
+        feedbackName = document.getElementById('feedback-name'),
+        feedbackPlace = document.getElementById('feedback-place'),
+        feedbackTextarea = document.getElementById('feedback-textarea');
 
-    // Создаем собственный макет с информацией о выбранном геообъекте.
     var customItemContentLayout = ymaps.templateLayoutFactory.createClass(
-        // Флаг "raw" означает, что данные вставляют "как есть" без экранирования html.
         '<h2 class=ballon_header>{{ properties.balloonContentHeader|raw }}</h2>' +
         '<div class=ballon_body>{{ properties.balloonContentBody|raw }}</div>' +
         '<div class=ballon_footer>{{ properties.balloonContentFooter|raw }}</div>'
@@ -26,65 +29,65 @@ ymaps.ready(function() {
     var clusterer = new ymaps.Clusterer({
         clusterDisableClickZoom: true,
         clusterOpenBalloonOnClick: true,
-        // Устанавливаем стандартный макет балуна кластера "Карусель".
         clusterBalloonContentLayout: 'cluster#balloonCarousel',
-        // Устанавливаем собственный макет.
         clusterBalloonItemContentLayout: customItemContentLayout,
-        // Устанавливаем режим открытия балуна. 
-        // В данном примере балун никогда не будет открываться в режиме панели.
         clusterBalloonPanelMaxMapArea: 0,
-        // Устанавливаем размеры макета контента балуна (в пикселях).
         clusterBalloonContentLayoutWidth: 200,
         clusterBalloonContentLayoutHeight: 130,
-        // Устанавливаем максимальное количество элементов в нижней панели на одной странице
-        clusterBalloonPagerSize: 5
+        clusterBalloonPagerSize: 9
 
     });
 
     map.events.add('click', function(e) {
-        if (!map.balloon.isOpen()) {
-            e.preventDefault();
-            pointId++;
-            coords = e.get('coords');
-            clientPixels = e.get('clientPixels');
-            popup.style.left = clientPixels[0] + 'px';
-            popup.style.top = clientPixels[1] + 'px';
-            ymaps.geocode(coords, { kind: 'street' }).then(function(res) {
-                var nearestStreet = res.geoObjects.get(0);
-                headerText.innerText = `${nearestStreet.properties.get('description')}, ${nearestStreet.properties.get('name')}`;
-                popup.style.display = 'block';
-            });
-        } else {
-            map.balloon.close();
-        }
+
+        e.preventDefault();
+        map.balloon.close();
+        clearFeedbackForms();
+        var clientPixels = e.get('clientPixels');
+        popup.style.left = clientPixels[0] + 'px';
+        popup.style.top = clientPixels[1] + 'px';
+        coords = e.get('coords');
+        ymaps.geocode(coords, { kind: 'street' }).then(function(res) {
+            var nearestStreet = res.geoObjects.get(0);
+            headerText.innerText = `${nearestStreet.properties.get('description')}, ${nearestStreet.properties.get('name')}`;
+            popup.style.display = 'block';
+        });
+
     });
 
     add.addEventListener('click', function(e) {
-        point = {
+        if (!coords) {
+            return;
+        }
+        var point = {
             coords: coords,
-            userName: document.getElementById('feedback-name').value,
-            place: document.getElementById('feedback-place').value,
+            userName: feedbackName.value,
+            place: feedbackPlace.value,
             streatName: headerText.innerText,
             feedback: document.getElementById('feedback-textarea').value,
             date: (new Date()).toLocaleString("ru")
         }
         points.push(point);
-
+        debugger;
         localStorage.setItem('placemarks', JSON.stringify(points));
 
         addPointToMap(point);
-
+        var feedbacks = getPointsByCoord(point.coords);
+        clearFeedbackForms();
+        feedbackWrap.innerHTML = createFeedbacks(feedbacks);
     });
 
     link.addEventListener('click', function(e) {
-        var coords = e.target.dataset.coords;
-        if (!coords) {
+        popup.style.display = 'none';
+        var datasetCoords = e.target.dataset.coords;
+        if (!datasetCoords) {
             return;
         }
         map.balloon.close();
-        coords = coords.split(';');
+        clearFeedbackForms();
+        debugger;
+        coords = datasetCoords.split(';');
         var feedbacks = getPointsByCoord(coords);
-        // debugger;
 
         feedbackWrap.innerHTML = createFeedbacks(feedbacks);
         popup.style.left = e.pageX + 'px';
@@ -99,6 +102,7 @@ ymaps.ready(function() {
     }
 
     function addPointToMap(point) {
+
         var placemark = new ymaps.Placemark(point.coords, {
             balloonContentHeader: point.place,
             balloonContentBody: `<p><a href="#" data-coords="${point.coords[0]};${point.coords[1]}" >${point.streatName}</a></p> 
@@ -111,14 +115,19 @@ ymaps.ready(function() {
     }
 
     function createFeedbacks(feedbacks) {
-        var templateFn = require('./feedbacks-template.hbs');
-        debugger;
-        return templateFn({
-            friends: feedbacks
+        return feedbacksTemplate({
+            feedbacks: feedbacks
         });
     }
 
-    document.getElementById('hider').onclick = function() {
+    function clearFeedbackForms() {
+        feedbackWrap.innerHTML = createFeedbacks([]);
+        feedbackName.value = "";
+        feedbackPlace.value = "";
+        feedbackTextarea.value = "";
+    }
+
+    formHider.onclick = function() {
         document.getElementById('popup').style.display = 'none';
     }
 
